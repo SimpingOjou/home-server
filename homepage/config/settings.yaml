@@ -1,0 +1,7 @@
+title: "Il Mio toposito - topolini.cc"
+background: 
+  blur: 5 # Effetto sfocato figo se vuoi che il testo si legga bene
+layout:
+  header:
+    showGreeting: true
+    greeting: "Ciao, sono Pupi e questo è il mio toposito"

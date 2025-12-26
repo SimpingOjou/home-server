@@ -1,10 +1,6 @@
 .env
 
 # Container data
-**/config/
-**/data/
-**/cache/
-**/db/
 jellyfin/
 nextcloud/
 pihole/
