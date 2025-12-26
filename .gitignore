@@ -7,6 +7,8 @@ pihole/
 uptime-kuma/
 portainer/
 tailscale/
+transmission/
+media/
 
 # System files and logs
 *.log

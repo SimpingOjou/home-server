@@ -40,7 +40,6 @@ The project is built on a **Dual-Layer Access** model:
 ```bash
 git clone https://github.com/SimpingOjou/home-server.git
 cd home-server
-
 ```
 
 
@@ -48,14 +47,13 @@ cd home-server
 ```bash
 cp .env.example .env
 vim .env
-
 ```
 
 
 3. Deploy the stack:
 ```bash
-sudo docker stack deploy -c docker-compose.yml main
-
+export $(grep -v '^#' .env | xargs)
+sudo -E docker stack deploy -c docker-compose.yml main
 ```
 
 ## 🌐 Networking 

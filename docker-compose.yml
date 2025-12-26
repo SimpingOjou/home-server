@@ -18,7 +18,7 @@ services:
         mode: host
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${HOME_PATH}/home-server/portainer:/data
+      - ${HOME_PATH}/portainer:/data
     deploy:
       restart_policy:
         condition: on-failure
@@ -39,7 +39,7 @@ services:
         protocol: tcp
         mode: host
     volumes:
-      - ${HOME_PATH}/home-server/uptime-kuma:/app/data
+      - ${HOME_PATH}/uptime-kuma:/app/data
     deploy:
       restart_policy:
         condition: on-failure
@@ -66,7 +66,7 @@ services:
     networks:
       - lab_network
     volumes:
-      - ${HOME_PATH}/home-server/homepage/config:/app/config
+      - ${HOME_PATH}/homepage/config:/app/config
       - /var/run/docker.sock:/var/run/docker.sock:ro
     deploy:
       restart_policy:
@@ -82,7 +82,7 @@ services:
     networks:
       - lab_network
     volumes:
-      - ${HOME_PATH}/home-server/nextcloud/db:/var/lib/mysql
+      - ${HOME_PATH}/nextcloud/db:/var/lib/mysql
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
       - MYSQL_PASSWORD=${DB_PASSWORD}
@@ -100,7 +100,7 @@ services:
     networks:
       - lab_network
     volumes:
-      - ${HOME_PATH}/home-server/nextcloud/data:/var/www/html
+      - ${HOME_PATH}/nextcloud/data:/var/www/html
     environment:
       - MYSQL_HOST=db
       - MYSQL_PASSWORD=${DB_PASSWORD}
@@ -125,18 +125,44 @@ services:
         protocol: tcp
         mode: host 
     volumes:
-      - ${HOME_PATH}/home-server/jellyfin/config:/config
-      - ${HOME_PATH}/home-server/jellyfin/cache:/cache
-      - ${HOME_PATH}/home-server/media/movies:/data/movies
-      - ${HOME_PATH}/home-server/media/shows:/data/tvshows
-      - ${HOME_PATH}/home-server/media/anime:/data/anime
-      - ${HOME_PATH}/home-server/media/dwl:/data/dwl
+      - ${HOME_PATH}/jellyfin/config:/config
+      - ${HOME_PATH}/jellyfin/cache:/cache
+      - ${HOME_PATH}/media/movies:/data/movies
+      - ${HOME_PATH}/media/shows:/data/tvshows
+      - ${HOME_PATH}/media/anime:/data/anime
+      - ${HOME_PATH}/media/dwl:/data/dwl
     deploy:
       restart_policy:
         condition: on-failure
       resources:
         limits:
           memory: 4G 
+
+  transmission:
+    image: lscr.io/linuxserver/transmission:latest
+    networks:
+      - torrent_network  # <--- Forza l'uso della rete isolata
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - USER=${TRANSMISSION_USER}
+      - PASS=${TRANSMISSION_PASS}
+    volumes:
+      - ${HOME_PATH}/transmission/config:/config
+      - ${HOME_PATH}/media/movies:/downloads
+    ports:
+      - target: 9091
+        published: 9091
+        protocol: tcp
+        mode: host 
+      - target: 51413
+        published: 51413
+        protocol: tcp
+        mode: host
+      - target: 51413
+        published: 51413
+        protocol: udp
+        mode: host
 
   ### DNS config
   pihole:
@@ -162,8 +188,8 @@ services:
       - WEBPASSWORD=${PIHOLE_PASSWORD}
       - FTLCONF_LOCAL_IPV4=${PIHOLE_IPV4}
     volumes:
-      - ${HOME_PATH}/home-server/pihole/config:/etc/pihole
-      - ${HOME_PATH}/home-server/pihole/dnsmasq.d:/etc/dnsmasq.d
+      - ${HOME_PATH}/pihole/config:/etc/pihole
+      - ${HOME_PATH}/pihole/dnsmasq.d:/etc/dnsmasq.d
     deploy:
       placement:
         constraints: [node.role == manager]
@@ -178,3 +204,6 @@ networks:
     driver: overlay
     attachable: true
     external: true
+  torrent_network:
+    driver: overlay
+    attachable: true
