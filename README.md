@@ -58,7 +58,7 @@ sudo docker stack deploy -c docker-compose.yml main
 
 ```
 
-## 🌐 Networking & Traffic Flow (The SysAdmin Guide)
+## 🌐 Networking 
 
 In this setup, Ubuntu acts as a **Layer 4 Traffic Controller**. The security is based on a "Default Deny" policy where only specific tunnels and local interfaces are trusted.
 
