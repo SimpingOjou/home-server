@@ -1,0 +1,180 @@
+version: '3.8'
+
+services:
+  ### MANAGEMENT
+  portainer:
+    image: portainer/portainer-ce:latest
+    command: -H unix:///var/run/docker.sock
+    # networks:
+    #   - lab_network
+    ports:
+      - target: 9000
+        published: 9000
+        protocol: tcp
+        mode: host  # <--- Questo bypassa il routing mesh e spara la porta direttamente sul server
+      - target: 9443
+        published: 9443
+        protocol: tcp
+        mode: host
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${HOME_PATH}/home-server/portainer:/data
+    deploy:
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints: [node.role == manager]
+      resources:
+        limits:
+          memory: 512M
+  
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    # user: "1000:1000"
+    networks:
+      - lab_network
+    ports:
+      - target: 3001
+        published: 3001
+        protocol: tcp
+        mode: host
+    volumes:
+      - ${HOME_PATH}/home-server/uptime-kuma:/app/data
+    deploy:
+      restart_policy:
+        condition: on-failure
+
+  ### INFRASTRUCTURE
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    user: "1000:1000"
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - lab_network
+    deploy:
+      restart_policy:
+        condition: on-failure
+
+  ### WEB UI
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    user: "1000:1000"
+    environment: 
+      - HOMEPAGE_ALLOWED_HOSTS=www.topolini.cc,topolini.cc
+    networks:
+      - lab_network
+    volumes:
+      - ${HOME_PATH}/home-server/homepage/config:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    deploy:
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: 256M
+
+  ### PERSONAL CLOUD
+  db:
+    image: mariadb:10.6
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
+    networks:
+      - lab_network
+    volumes:
+      - ${HOME_PATH}/home-server/nextcloud/db:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+    deploy:
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: 2G
+
+  nextcloud:
+    image: nextcloud:latest
+    networks:
+      - lab_network
+    volumes:
+      - ${HOME_PATH}/home-server/nextcloud/data:/var/www/html
+    environment:
+      - MYSQL_HOST=db
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+    deploy:
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: 4G
+
+  ### MEDIA 
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    user: "1000:1000"
+    networks:
+      - lab_network
+    ports:
+      - target: 8096
+        published: 8096
+        protocol: tcp
+        mode: host 
+    volumes:
+      - ${HOME_PATH}/home-server/jellyfin/config:/config
+      - ${HOME_PATH}/home-server/jellyfin/cache:/cache
+      - ${HOME_PATH}/home-server/media/movies:/data/movies
+      - ${HOME_PATH}/home-server/media/shows:/data/tvshows
+      - ${HOME_PATH}/home-server/media/anime:/data/anime
+      - ${HOME_PATH}/home-server/media/dwl:/data/dwl
+    deploy:
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: 4G 
+
+  ### DNS config
+  pihole:
+    image: pihole/pihole:latest
+    hostname: pihole-topolini
+    networks:
+      - lab_network
+    ports:
+      - target: 53
+        published: 53
+        protocol: tcp
+        mode: host
+      - target: 53
+        published: 53
+        protocol: udp
+        mode: host
+      - target: 80
+        published: 8053 
+        protocol: tcp
+        mode: host
+    environment:
+      - TZ=Europe/Rome
+      - WEBPASSWORD=${PIHOLE_PASSWORD}
+      - FTLCONF_LOCAL_IPV4=${PIHOLE_IPV4}
+    volumes:
+      - ${HOME_PATH}/home-server/pihole/config:/etc/pihole
+      - ${HOME_PATH}/home-server/pihole/dnsmasq.d:/etc/dnsmasq.d
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: 2G
+
+networks:
+  lab_network:
+    driver: overlay
+    attachable: true
+    external: true

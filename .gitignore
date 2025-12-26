@@ -1,0 +1,17 @@
+.env
+
+# Container data
+**/config/
+**/data/
+**/cache/
+**/db/
+jellyfin/
+nextcloud/
+pihole/
+uptime-kuma/
+portainer/
+tailscale/
+
+# System files and logs
+*.log
+.DS_Store
