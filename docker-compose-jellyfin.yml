@@ -1,0 +1,23 @@
+version: '3.8'
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin_standalone
+    # Host mode solves 90% of DLNA/Discovery/Port issues
+    network_mode: "host" 
+    environment:
+      - JELLYFIN_PublishedServerUrl=http://192.168.1.105:8096
+      # Uncomment the next line only if the default driver fails
+      # - LIBVA_DRIVER_NAME=i965
+    volumes:
+      - ${HOME_PATH}/jellyfin/config:/config
+      - ${HOME_PATH}/jellyfin/cache:/cache
+      - ${HOME_PATH}/media/movies:/data/movies
+      - ${HOME_PATH}/media/shows:/data/tvshows
+      - ${HOME_PATH}/media/anime:/data/anime
+      - ${HOME_PATH}/media/dwl:/data/dwl
+    devices:
+      # We know from your ls -l that D128 is the Intel card
+      - /dev/dri/renderD128:/dev/dri/renderD128
+      - /dev/dri/card1:/dev/dri/card1
+    restart: unless-stopped
