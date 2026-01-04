@@ -9,6 +9,9 @@ portainer/
 tailscale/
 transmission/
 media/
+lidarr/
+navidrome/
+npm/
 
 # System files and logs
 *.log

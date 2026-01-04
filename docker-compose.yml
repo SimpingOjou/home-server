@@ -82,7 +82,7 @@ services:
     networks:
       - lab_network
     volumes:
-      - ${HOME_PATH}/nextcloud/db:/var/lib/mysql
+      - ${DATA_PATH}/apps/nextcloud/db:/var/lib/mysql
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
       - MYSQL_PASSWORD=${DB_PASSWORD}
@@ -100,7 +100,7 @@ services:
     networks:
       - lab_network
     volumes:
-      - ${HOME_PATH}/nextcloud/data:/var/www/html
+      - ${DATA_PATH}/apps/nextcloud/data:/var/www/html
     environment:
       - MYSQL_HOST=db
       - MYSQL_PASSWORD=${DB_PASSWORD}
@@ -124,7 +124,8 @@ services:
       - PASS=${TRANSMISSION_PASS}
     volumes:
       - ${HOME_PATH}/transmission/config:/config
-      - ${HOME_PATH}/media/movies:/downloads
+      - ${DATA_PATH}/media:/downloads
+      
     ports:
       - target: 9091
         published: 9091
