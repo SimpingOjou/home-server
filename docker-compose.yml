@@ -111,7 +111,7 @@ services:
         condition: on-failure
       resources:
         limits:
-          memory: 4G
+          memory: 8G
 
   transmission:
     image: lscr.io/linuxserver/transmission:latest
@@ -173,7 +173,7 @@ services:
         condition: on-failure
       resources:
         limits:
-          memory: 2G
+          memory: 3G
 
 networks:
   lab_network:

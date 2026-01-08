@@ -9,7 +9,7 @@ services:
     environment:
       ND_SCANSCHEDULE: 1h
       ND_LOGLEVEL: info
-      ND_BASEURL: "" # Set this if using a reverse proxy subpath
+      ND_BASEURL: https://music.topolini.cc # Set this if using a reverse proxy subpath
     volumes:
       - ${HOME_PATH}/navidrome/data:/data
       - ${DATA_PATH}/media/music:/music:ro # Read-only for the streamer
