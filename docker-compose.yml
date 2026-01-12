@@ -99,6 +99,11 @@ services:
     image: nextcloud:latest
     networks:
       - lab_network
+    ports:
+      - target: 80
+        published: 8080
+        protocol: tcp
+        mode: host
     volumes:
       - ${DATA_PATH}/apps/nextcloud/data:/var/www/html
     environment:
