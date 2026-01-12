@@ -76,13 +76,24 @@ services:
           memory: 256M
 
   ### PERSONAL CLOUD
+  redis:
+    image: redis:alpine
+    networks:
+      - lab_network
+    deploy:
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: 512MB
+
   db:
     image: mariadb:10.6
     command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
     networks:
       - lab_network
     volumes:
-      - ${DATA_PATH}/apps/nextcloud/db:/var/lib/mysql
+      - ${HOME_PATH}/nextcloud:/var/lib/mysql
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
       - MYSQL_PASSWORD=${DB_PASSWORD}
@@ -111,6 +122,7 @@ services:
       - MYSQL_PASSWORD=${DB_PASSWORD}
       - MYSQL_DATABASE=nextcloud
       - MYSQL_USER=nextcloud
+      - REDIS_HOST=redis
     deploy:
       restart_policy:
         condition: on-failure
