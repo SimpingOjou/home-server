@@ -12,6 +12,8 @@ media/
 lidarr/
 navidrome/
 npm/
+vaultwarden/
+immich/
 
 # System files and logs
 *.log

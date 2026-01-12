@@ -75,6 +75,29 @@ services:
         limits:
           memory: 256M
 
+  ### PASSWORDS (Vaultwarden)
+  vaultwarden:
+    image: vaultwarden/server:latest
+    networks:
+      - lab_network
+    volumes:
+      - ${HOME_PATH}/vaultwarden:/data
+    environment:
+      - ADMIN_TOKEN=${VAULTWARDEN_ADMIN_TOKEN}
+      # Allow signups initially to create your account, then change to false!
+      - SIGNUPS_ALLOWED=true 
+    ports:
+      - target: 80
+        published: 8081 # Exposed locally if needed, but Cloudflare Tunnel is better
+        protocol: tcp
+        mode: host
+    deploy:
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: 512M
+
   ### PERSONAL CLOUD
   redis:
     image: redis:alpine
