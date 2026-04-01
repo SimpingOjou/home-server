@@ -98,6 +98,31 @@ services:
         limits:
           memory: 512M
 
+  ### MUSIC
+  navidrome:
+    image: deluan/navidrome:latest
+    hostname: navidrome
+    networks:
+      - lab_network
+    ports:
+      - target: 4533
+        published: 4533
+        protocol: tcp
+        mode: host
+    environment:
+      ND_SCANSCHEDULE: 1h
+      ND_LOGLEVEL: info
+      ND_BASEURL: https://music.topolini.cc
+    volumes:
+      - ${HOME_PATH}/navidrome/data:/data
+      - ${DATA_PATH}/media/music:/music:ro
+    deploy:
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: 4G
+
   ### PERSONAL CLOUD
   redis:
     image: redis:alpine
@@ -153,10 +178,34 @@ services:
         limits:
           memory: 8G
 
+  ### ZOTERO (WEBDAV)
+  zotero-webdav:
+    image: bytemark/webdav:latest
+    networks:
+      - lab_network
+    ports:
+      - target: 80
+        published: 8082
+        protocol: tcp
+        mode: host
+    environment:
+      - AUTH_TYPE=Basic
+      - USERNAME=${ZOTERO_USER}
+      - PASSWORD=${ZOTERO_WEBDAV_PASSWORD} 
+    volumes:
+      - ${DATA_PATH}/zotero:/var/lib/dav
+    deploy:
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: 512M
+
   transmission:
     image: lscr.io/linuxserver/transmission:latest
     networks:
       - torrent_network  # <--- Forza l'uso della rete isolata
+      - lab_network  # <--- Allows Radarr/Sonarr/Prowlarr to communicate with it
     environment:
       - PUID=1000
       - PGID=1000
@@ -165,7 +214,6 @@ services:
     volumes:
       - ${HOME_PATH}/transmission/config:/config
       - ${DATA_PATH}/media:/downloads
-      
     ports:
       - target: 9091
         published: 9091
@@ -214,6 +262,157 @@ services:
       resources:
         limits:
           memory: 3G
+
+  ### INDEXER MANAGER
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    environment:
+      - PUID=1000
+      - PGID=1000
+    networks:
+      - lab_network
+    ports:
+      - target: 9696
+        published: 9696
+        protocol: tcp
+        mode: host
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+      restart_policy:
+        condition: on-failure
+    volumes:
+      - ${HOME_PATH}/prowlarr/config:/config
+
+  ### MOVIES
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    environment:
+      - PUID=1000
+      - PGID=1000
+    networks:
+      - lab_network
+    ports:
+      - target: 7878
+        published: 7878
+        protocol: tcp
+        mode: host
+    deploy:
+      restart_policy:
+        condition: on-failure
+    volumes:
+      - ${HOME_PATH}/radarr/config:/config
+      - ${DATA_PATH}/media:/media 
+
+  ### SERIES
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    environment:
+      - PUID=1000
+      - PGID=1000
+    networks:
+      - lab_network
+    ports:
+      - target: 8989
+        published: 8989
+        protocol: tcp
+        mode: host
+    deploy:
+      restart_policy:
+        condition: on-failure
+    volumes:
+      - ${HOME_PATH}/sonarr/config:/config
+      - ${DATA_PATH}/media:/media 
+  
+  ### MUSIC
+  # lidarr:
+  #   image: lscr.io/linuxserver/lidarr:latest
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #   networks:
+  #     - lab_network
+  #   ports:
+  #     - target: 8686
+  #       published: 8686
+  #       protocol: tcp
+  #       mode: host
+  #   deploy:
+  #     restart_policy:
+  #       condition: on-failure
+  #   volumes:
+  #     - ${HOME_PATH}/lidarr/config:/config
+  #     - ${DATA_PATH}/media:/media 
+
+  ### REQUEST MANAGEMENT
+  jellyseerr:
+    image: fallenbagel/jellyseerr:latest
+    environment:
+      - PUID=1000
+      - PGID=1000
+    networks:
+      - lab_network
+    ports:
+      - target: 5055
+        published: 5055
+        protocol: tcp
+        mode: host
+    deploy:
+      restart_policy:
+        condition: on-failure
+    volumes:
+      - ${HOME_PATH}/jellyseerr/config:/app/config
+      - ${DATA_PATH}/media:/media 
+
+  ### CLOUDFLARE BYPASS
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    networks:
+      - lab_network
+    ports:
+      - target: 8191
+        published: 8191
+        protocol: tcp
+        mode: host
+    environment:
+      - LOG_LEVEL=info
+    deploy:
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          memory: 1G
+
+  # gluetun:
+  #   image: qmcgaw/gluetun:latest
+  #   container_name: gluetun
+  #   cap_add:
+  #     - NET_ADMIN
+  #   devices:
+  #     - /dev/net/tun:/dev/net/tun
+  #   ports:
+  #     # --- PORTE ---
+  #     # Mappiamo qui le porte di Transmission perché Gluetun è l'unica interfaccia verso l'esterno.
+      
+  #     - "9091:9091"           # Web UI di Transmission (Accessibile dalla tua LAN/Tailscale)
+  #     - "51413:51413"         # Traffico Torrent TCP
+  #     - "51413:51413/udp"     # Traffico Torrent UDP
+  #   environment:
+  #     # --- PROTONVPN CONFIG ---
+  #     - VPN_SERVICE_PROVIDER=protonvpn
+  #     - VPN_TYPE=wireguard
+  #     # Genera la chiave privata dalla dashboard di Proton (vedi istruzioni sotto)
+  #     - WIREGUARD_PRIVATE_KEY=${PROTON_WG_PRIVATE_KEY}
+  #     - SERVER_COUNTRIES=Italy  # O Switzerland, Netherlands, etc.
+      
+  #     # --- RETE ---
+  #     # Permette l'accesso alla WebUI (9091) dalla tua rete locale (es. 192.168.1.0/24)
+  #     # Se usi Tailscale installato sull'host, questo solitamente non serve modificarlo, 
+  #     # ma se hai problemi ad accedere alla GUI, aggiungi la tua subnet qui.
+  #     - FIREWALL_OUTBOUND_SUBNETS=192.168.1.0/24 
+  #   volumes:
+  #     - ./gluetun:/gluetun
+  #   restart: unless-stopped
 
 networks:
   lab_network:

@@ -1,0 +1,86 @@
+services:
+  # navidrome:
+  #   image: deluan/navidrome:latest
+  #   container_name: navidrome
+  #   # user: "1000:1000" # Match your local user
+  #   # ports:
+  #   #   - "4533:4533"
+  #   network_mode: "host"
+  #   environment:
+  #     ND_SCANSCHEDULE: 1h
+  #     ND_LOGLEVEL: info
+  #     ND_BASEURL: https://music.topolini.cc # Set this if using a reverse proxy subpath
+  #   volumes:
+  #     - ${HOME_PATH}/navidrome/data:/data
+  #     - ${DATA_PATH}/media/music:/music:ro # Read-only for the streamer
+  #   restart: unless-stopped
+
+  transmission:
+    image: lscr.io/linuxserver/transmission:latest
+    container_name: transmission
+    # --- IL CUORE DEL SISTEMA ---
+    # Dice a Transmission: "Non usare la tua rete, usa quella di Gluetun".
+    network_mode: service:gluetun 
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Rome
+      - USER=${TRANSMISSION_USER}
+      - PASS=${TRANSMISSION_PASS}
+    volumes:
+      # Usa path assoluti o relativi a dove metti questo file
+      - ${HOME_PATH}/transmission/config:/config
+      - ${DATA_PATH}/media:/downloads
+    # Nota: NESSUNA porta dichiarata qui, sono tutte gestite sopra da Gluetun.
+    depends_on:
+      - gluetun
+    restart: unless-stopped
+
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      # --- PORTE ---
+      # Mappiamo qui le porte di Transmission perché Gluetun è l'unica interfaccia verso l'esterno.
+      
+      - "9091:9091"           # Web UI di Transmission (Accessibile dalla tua LAN/Tailscale)
+      - "51413:51413"         # Traffico Torrent TCP
+      - "51413:51413/udp"     # Traffico Torrent UDP
+    environment:
+      # --- PROTONVPN CONFIG ---
+      - VPN_SERVICE_PROVIDER=protonvpn
+      - VPN_TYPE=wireguard
+      # Genera la chiave privata dalla dashboard di Proton (vedi istruzioni sotto)
+      - WIREGUARD_PRIVATE_KEY=${PROTON_WG_PRIVATE_KEY}
+      - SERVER_COUNTRIES=Italy  # O Switzerland, Netherlands, etc.
+      
+      # --- RETE ---
+      # Permette l'accesso alla WebUI (9091) dalla tua rete locale (es. 192.168.1.0/24)
+      # Se usi Tailscale installato sull'host, questo solitamente non serve modificarlo, 
+      # ma se hai problemi ad accedere alla GUI, aggiungi la tua subnet qui.
+      - FIREWALL_OUTBOUND_SUBNETS=192.168.1.0/24 
+    volumes:
+      - ./gluetun:/gluetun
+    restart: unless-stopped
+
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    network_mode: "host"
+    environment:
+      - PUID=1000 # Run 'id' in your terminal to confirm
+      - PGID=1000
+      - TZ=Etc/UTC # e.g., America/New_York
+    volumes:
+      - ${HOME_PATH}/lidarr/config:/config
+      - ${DATA_PATH}/media/music:/music
+      - ${DATA_PATH}/media/dwl:/downloads # THIS MUST MATCH YOUR DOWNLOADER'S PATH
+    restart: unless-stopped
+
+    torrent_network:
+    driver: overlay
+    attachable: true

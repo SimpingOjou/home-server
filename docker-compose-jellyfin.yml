@@ -1,6 +1,6 @@
 version: '3.8'
 services:
-  jellyfin:
+  jellyfin: # A parte per avere hardware acceleration
     image: jellyfin/jellyfin:latest
     container_name: jellyfin_standalone
     # Host mode solves 90% of DLNA/Discovery/Port issues
